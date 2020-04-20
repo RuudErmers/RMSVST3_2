@@ -1,0 +1,36 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{7B12BD1A-AFA8-4D09-B66B-97AE0E837A42}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="RMSVST4\RMSMyVST4.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="RMSMyVST4">
+        <MSBuild Projects="RMSVST4\RMSMyVST4.dproj"/>
+    </Target>
+    <Target Name="RMSMyVST4:Clean">
+        <MSBuild Projects="RMSVST4\RMSMyVST4.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RMSMyVST4:Make">
+        <MSBuild Projects="RMSVST4\RMSMyVST4.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="RMSMyVST4"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="RMSMyVST4:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="RMSMyVST4:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
