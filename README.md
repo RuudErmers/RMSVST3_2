@@ -1,11 +1,40 @@
 # RMSVST3_2
-Work In Progress Version of VST3 Wrapper with Seperate Processor and Controller
+Delphi VST3 wrapper
+
+Highlights:
+
+- Implements VST3 protocol
+- Implements Fruityplug
+- Separate Processor and Controller
+
+## Description
+Many VST3 aspects are supported, but not all.
+
+The main class is TVSTInstrument which implements the functionality of a VST3/Fruityplug Plugin.
+
+It is a combined Processor/Controller and implements the following:
+- Audio processing (synth or effect), two channel only. 
+- Midi CC processing
+- Parameter processing
+- Presets
+- Tempo / Playstate
+
+There is a simple example that implements some of the basics in a Simple Synthesizer VSTi. 
+There is documentation on how to implement this wrapper code. Tested in Reaper and FL Studio.
+
+I am planning to expand this software if some people are interested in it.
+But I am not sure if anyone is still developing in Delphi. 
+So if you have any interest, let me know.
+
+I really would like to expand this to something like (the VST part of ) the old DelphiAsioVST stuff which was popular in the past.
+Delphi is still a very strong language and with the community edition is my favorite platform. See my website www.ermers.org for other stuff.
+
+So..if you want to give it a try... just load the example project(s) and hit Build. (You must have CodeSite installed, see the GetIt Package manager).
+Copy the VST3 to your plugin directory and who knows...
+
 
 ## TVSTInstrument API
-Version 1.3 	19 March 2019
-
-In this framework you find Delphi wrapper code to create VST2, VST3 and FruityPlug Instruments.
-For this, there’s a translation between a new wrapper-type TVSTInstrument and the various platforms. 
+In this framework you find Delphi wrapper code to create VST2, VST3 and FruityPlug Instruments. For this, there’s a translation between a new wrapper-type TVSTInstrument and the various platforms. 
 Instead of having three versions for these platforms, you create a derivative from TVSTInstrument.
 An example of this is the class TMyVSTPlugin, found in the SimplesynthCommon directory.
 In this document, the API of TVSTInstrument is discussed. 
@@ -67,32 +96,34 @@ Missing from the API (will be implemented on request)
 -	MidiOut (for  VST3) 
 -	MidiIn stuff like MPC, aftertouch (for VST3)
 
- 
-## internal remarks for Ruud
+## Description SimpleSynth
 
-Midi In / CCs and Note On/Off and Parameters
+SimpleSynth is an example of how to use TVSTInstrument. 
+As you can see in the RMSVST2, RMSVST3 and FruityPlug directories, you can create various versions of a plugin for various frameworks.
+This document describes the architecture of TMyVstPlugin
 
-The system generates Midi events and simulated Parameters, but how does it work?
+TMyVSTPlugin inherits from TVSTInstrument to create a simple synth plugin: It only reacts to Midi Note On/Off and has a few parameters for Cutoff, Resonance and PulseWidth.
 
-||VST2|VST3*|FruityPlug|
-|-|-|-|-|
-|OnMidiEvent|HostCallProcessEvents<br>This seams to be called from UI Thread..|Notes: Processor thread, not UI. Parameters (CC): Processor thread, not UI.|MidiIn procedure (GM) (GUI / Mixer Thread)=ThreadSafe
-|UpdateEditorParameter|HostCallSetParameter NOT from UI gets Cached and send in OnIdle.<br>Also calls to UpdateHostParameter are treated the same way 	Controller thread, UI thread|See VST2|
-|UpdateProcessorParameter|HostCallSetParameter and 
-UpdateHostParameter call this, on NON-UI	Processor thread, not UI.|See VST2|
-|UpdateEditorMidiEvent|Not used|Parameters(CC)
-Controller thread, UI thread|Not used|
+### UMyVST.pas
 
-In VST3 MIDI CC is constructed with Parameter Changes.
+Defines the `TMyVSTPlugin`. In `GetVSTInstrumentInfo` it describes the architecture: 
+The class to create is TMyVSTPlugin and the editor class is `TFormMyVST`.
 
-There is a BIG difference between OnMidiEvent for VST3 vs. VST2/Fruityplug..
+In OnInitialize 
+-	the real synth is created: TSImpleSynth.Create.
+-	Three parameters are added.
+In Process we need to fill the audiobuffer. 
+For this we call FsimpleSynth.process which generates 1 sample. We copy it to all channels and call this function ‘samples’ time.
+In OnEditOpen we are notified that the editor will open. Note that the actual editor is an instance of TFormMyVST. This form gets two callbacks when a parameter is changed in the editor or a key is pressed. Then we call resendParameters which resends the parameter values.
+In UpdateEditorParameter we update the editor
+In UpdateUpdateProcessorParameter we update the synth
 
-My plugins process OnMidiCC as follows:
--	Parameters CC event:	-> Update Model (=Processor) and call UpdateHostParameters
--	Note Events		-> Update Model (=Processor) and UI::Keyboard but this does not use the UI
+When a key is pressed this is forwarded to the SimpleSynth (onKeyEvent)
 
-“Thus”, this works with all formats: VST2 and FP use the Loopback in HostCallSetParameter. VST3 works because UpdateEditorMidiEvent gets called. 
-	Note that in Fruity Loops the parameter trick does not work (and MIDI CC don’t get called) and that in Reaper I get ‘faultly’ receive on a ParameterCC message (luckily!)
-So, for now MIDI support is at least to say ‘buggy’…but it’s not my fault.. (nor Steinberg)
+### UMyVSTDSP.pas
 
-OK, I changed this for VST3. There is now an OnIdle thingie… 
+Here `TSimpleSynth` is implemented. Although the internals might be interesting, the main focus are the public methods, `updateParameter`, `Process` and `onKeyEvent`. These have been discussed in UMyVST.
+
+### UMyVSTForm.pas
+
+The OnKeyEvent and UpdateHostParameter are filled in from UMyVST and make it possible to send keys to the SimpleSynth and send parameter changes to the Host. UpdateEditorPreset and SetKey are used to show the correct settings. SetPreset is just a simple call showing the current preset. Note that when changing preset, the parameters will automagically update here and in the SimpleSynth.
